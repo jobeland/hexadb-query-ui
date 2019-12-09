@@ -13,6 +13,7 @@ import logo from './logo.svg';
 import ReactJson from 'react-json-view'
 import './App.css';
 import 'react-bootstrap-typeahead/css/Typeahead.css';
+const shortid = require('shortid');
 
 function App() {
   const [predicates, setPredicates] = React.useState(['type', 'temp', 'humidity', 'color']);
@@ -21,7 +22,7 @@ function App() {
   const [storeId, setStoreId] = React.useState(localStorage.getItem('storeId') || '');
   const [filters, setFilters] = React.useState([
     {
-      index: 0,
+      id: shortid.generate(),
       predicate: '',
       operation: '',
       value: ''
@@ -29,13 +30,30 @@ function App() {
   ]);
   const [outgoings, setOutgoings] = React.useState([
     {
-      index: 0,
+      id: shortid.generate(),
       path: '*',
       level: 0,
       target: {
         filters: [
           {
-            index: 0,
+            id: shortid.generate(),
+            predicate: '',
+            operation: '',
+            value: ''
+          }
+        ] 
+      }
+    }
+  ]);
+  const [incomings, setIncomings] = React.useState([
+    {
+      id: shortid.generate(),
+      path: '*',
+      level: 0,
+      target: {
+        filters: [
+          {
+            id: shortid.generate(),
             predicate: '',
             operation: '',
             value: ''
@@ -53,6 +71,23 @@ function App() {
   const [showIncoming, setShowIncoming] = React.useState(false);
   const [values, setValues] = React.useState([]);
  
+
+  function handleFilterFormChange(e, currentFilter) {
+    setFilters(filters.map(f => f.id === currentFilter.id ? {...f, value: e.target && e.target.value} : f));
+  } 
+
+  function handleDeleteFilterForm(currentFilter) {
+    setFilters(filters.filter(f => f.id !== currentFilter.id));
+  }
+
+  function handleTypeaheadFilterSelection(selected, currentFilter, typeahead){
+    setFilters(filters.map(f => f.id === currentFilter.id ? {...f, [typeahead]: selected.length && selected[0]} : f));
+  }
+
+  function handleTypeaheadFilterChange(val, currentFilter, typeahead){
+    setFilters(filters.map(f => f.id === currentFilter.id ? {...f, [typeahead]: val} : f));
+  }
+
   function renderFilters() {
     var filterGroups = [];
     for(var filter of filters) {
@@ -65,8 +100,8 @@ function App() {
           className="Typeahead"
           value={filter.predicate}
           allowNew={true}
-          onChange={(selected) => setFilters(filters.map(f => f.index === filter.index ? {...f, predicate: selected.length && selected[0]} : f))}
-          onInputChange={(val) => setFilters(filters.map(f => f.index === filter.index ? {...f, predicate: val} : f))}
+          onChange={((currentFilter) => (selected) => handleTypeaheadFilterSelection(selected, currentFilter, 'predicate'))(filter)}
+          onInputChange={((currentFilter) => (val) => handleTypeaheadFilterChange(val, currentFilter, 'predicate'))(filter)}
         />
         <Typeahead
           labelKey="operation"
@@ -75,20 +110,55 @@ function App() {
           placeholder="Choose an operation"
           className="Typeahead"
           value={filter.operation}
-          onChange={(selected) => setFilters(filters.map(f => f.index === filter.index ? {...f, operation: selected.length && selected[0]} : f))}
-          onInputChange={(val) => setFilters(filters.map(f => f.index === filter.index ? {...f, operation: val} : f))}
+          onChange={((currentFilter) => (selected) => handleTypeaheadFilterSelection(selected, currentFilter, 'operation'))(filter)}
+          onInputChange={((currentFilter) => (val) => handleTypeaheadFilterChange(val, currentFilter, 'operation'))(filter)}
         ></Typeahead>
         <FormControl
           placeholder="value"
           aria-label="value"
           value={filter.value}
-          onChange={(e) => setFilters(filters.map(f => f.index === filter.index ? {...f, value: e.target && e.target.value} : f))}
+          onChange={((currentFilter) => (e) => handleFilterFormChange(e, currentFilter))(filter)}
         />
+        <Button variant="danger" onClick={((currentFilter) => () => handleDeleteFilterForm(currentFilter))(filter)}>X</Button>
     </InputGroup>)
     }
     return <>
     {filterGroups}
     </>;
+  }
+
+  function handleOutgoingFilterFormChange(e, currentOutgoing, currentFilter) {
+    setOutgoings(outgoings.map(o => o.id === currentOutgoing.id
+      ?  {...o, target: {...o.target, filters: o.target.filters.map(f => f.id === currentFilter.id 
+        ? {...f, value: e.target && e.target.value}
+        : f) }}
+      : o))
+  } 
+
+  function handleOutgoingDeleteFilterForm(currentOutgoing, currentFilter) {
+    setOutgoings(outgoings.map(o => o.id === currentOutgoing.id
+      ?  {...o, target: {...o.target, filters: o.target.filters.filter(f => f.id !== currentFilter.id)}}
+      : o))
+  }
+
+  function handleOutgoingDeleteForm(currentOutgoing) {
+    setOutgoings(outgoings.filter(o => o.id !== currentOutgoing.id));
+  }
+
+  function handleOutgoingTypeaheadFilterSelection(selected, currentOutgoing, currentFilter, typeahead){
+    setOutgoings(outgoings.map(o => o.id === currentOutgoing.id
+      ? {...o, target: {...o.target, filters: o.target.filters.map(f => f.id === currentFilter.id 
+        ? {...f, [typeahead]: selected.length && selected[0]}
+        : f) }} 
+      : o));
+  }
+
+  function handleOutgoingTypeaheadFilterChange(val, currentOutgoing, currentFilter, typeahead){
+    setOutgoings(outgoings.map(o => o.id === currentOutgoing.id
+      ? {...o, target: {...o.target, filters: o.target.filters.map(f => f.id === currentFilter.id 
+        ? {...f, [typeahead]: val}
+        : f) }}
+      : o));
   }
 
   function renderOutgoings() {
@@ -106,16 +176,10 @@ function App() {
               className="Typeahead"
               value={filter.predicate}
               allowNew={true}
-              onChange={(selected) => setOutgoings(outgoings.map(o => o.index === outgoing.index
-                ? {...o, target: {...o.target, filters: o.target.filters.map(f => f.index === filter.index 
-                  ? {...f, predicate: selected.length && selected[0]}
-                  : f) }} 
-                : o))}
-              onInputChange={(val) => setOutgoings(outgoings.map(o => o.index === outgoing.index
-                ? {...o, target: {...o.target, filters: o.target.filters.map(f => f.index === filter.index 
-                  ? {...f, predicate: val}
-                  : f) }}
-                : o))}
+              onChange={((currentOutgoing, currentFilter) =>
+                (selected) => handleOutgoingTypeaheadFilterSelection(selected, currentOutgoing, currentFilter, 'predicate'))(outgoing, filter)}
+              onInputChange={((currentOutgoing, currentFilter) =>
+                (val) => handleOutgoingTypeaheadFilterChange(val, currentOutgoing, currentFilter, 'predicate'))(outgoing, filter)}
             />
             <Typeahead
               labelKey="operation"
@@ -124,27 +188,18 @@ function App() {
               placeholder="Choose an operation"
               className="Typeahead"
               value={filter.operation}
-              onChange={(selected) => setOutgoings(outgoings.map(o => o.index === outgoing.index
-                ? {...o, target: {...o.target, filters: o.target.filters.map(f => f.index === filter.index 
-                  ? {...f, operation: selected.length && selected[0]}
-                  : f) }} 
-                : o))}
-              onInputChange={(val) => setOutgoings(outgoings.map(o => o.index === outgoing.index
-                ? {...o, target: {...o.target, filters: o.target.filters.map(f => f.index === filter.index 
-                  ? {...f, operation: val}
-                  : f) }}
-                : o))}
+              onChange={((currentOutgoing, currentFilter) =>
+                (selected) => handleOutgoingTypeaheadFilterSelection(selected, currentOutgoing, currentFilter, 'operation'))(outgoing, filter)}
+              onInputChange={((currentOutgoing, currentFilter) =>
+                (val) => handleOutgoingTypeaheadFilterChange(val, currentOutgoing, currentFilter, 'operation'))(outgoing, filter)}
             ></Typeahead>
             <FormControl
               placeholder="value"
               aria-label="value"
               value={filter.value}
-              onChange={(e) => setOutgoings(outgoings.map(o => o.index === outgoing.index
-                ?  {...o, target: {...o.target, filters: o.target.filters.map(f => f.index === filter.index 
-                  ? {...f, value: e.target && e.target.value}
-                  : f) }}
-                : o))}
+              onChange={((currentOutgoing, currentFilter) => (e) => handleOutgoingFilterFormChange(e, currentOutgoing, currentFilter))(outgoing, filter)}
             />
+            <Button variant="danger" onClick={((currentOutgoing, currentFilter) => () => handleOutgoingDeleteFilterForm(currentOutgoing, currentFilter))(outgoing, filter)}>X</Button>
           </InputGroup>);
       }
       outgoingGroups.push(<div className="section">
@@ -156,7 +211,7 @@ function App() {
         placeholder="path"
         aria-label="path"
         value={outgoing.path}
-        onChange={(e) => setOutgoings(outgoings.map(o => o.index === outgoing.index ? {...o, path: e.target && e.target.value} : o))}
+        onChange={((currentOutgoing) => (e) => setOutgoings(outgoings.map(o => o.id === currentOutgoing.id ? {...o, path: e.target && e.target.value} : o)))(outgoing)}
       />
       <Form.Label>
         Level
@@ -166,14 +221,15 @@ function App() {
         placeholder="level"
         aria-label="level"
         value={outgoing.level}
-        onChange={(e) => setOutgoings(outgoings.map(o => o.index === outgoing.index ? {...o, level: e.target && e.target.value} : o))}
+        onChange={((currentOutgoing) => (e) => setOutgoings(outgoings.map(o => o.id === currentOutgoing.id ? {...o, level: e.target && e.target.value} : o)))(outgoing)}
       />
       <Form.Label>
         Filters:
       </Form.Label>
       {filterGroups}
       <div className="action-button">
-            <Button variant="info" onClick={() => addOutgoingFilter(outgoing.index)}>Add Filter</Button>
+            <Button variant="info" onClick={((currentOutgoing) => () => addOutgoingFilter(currentOutgoing.id))(outgoing)}>Add Filter</Button>
+            <Button variant="danger" onClick={((currentOutgoing) => () => handleOutgoingDeleteForm(currentOutgoing))(outgoing)}>Remove</Button>
         </div>
       </div>);
     }
@@ -184,7 +240,7 @@ function App() {
 
   function addFilter(){
     setFilters([...filters, {
-      index: filters.length,
+      id: shortid.generate(),
       predicate: '',
       operation: '',
       value: ''
@@ -193,12 +249,12 @@ function App() {
 
   function addOutgoing(){
     setOutgoings([...outgoings, {
-      index: outgoings.length,
+      id: shortid.generate(),
       path: '*',
       target: {
         filters: [
           {
-            index: 0,
+            id: shortid.generate(),
             predicate: '',
             operation: '',
             value: ''
@@ -208,15 +264,154 @@ function App() {
     }]);
   }
 
-  function addOutgoingFilter(index){
-    var updatedOutgoing = outgoings.filter(o => o.index === index)[0];
+  function addOutgoingFilter(id){
+    var updatedOutgoing = outgoings.filter(o => o.id === id)[0];
     updatedOutgoing.target.filters = [...updatedOutgoing.target.filters, {
-      index: updatedOutgoing.target.filters.length,
+      id: shortid.generate(),
       predicate: '',
       operation: '',
       value: ''
     }];
-    setOutgoings(outgoings.map(o => o.index === index ? updatedOutgoing : o));
+    setOutgoings(outgoings.map(o => o.id === id ? updatedOutgoing : o));
+  }
+
+  function addIncoming(){
+    setIncomings([...incomings, {
+      id: shortid.generate(),
+      path: '*',
+      target: {
+        filters: [
+          {
+            id: shortid.generate(),
+            predicate: '',
+            operation: '',
+            value: ''
+          }
+        ] 
+      }
+    }]);
+  }
+
+  function addIncomingFilter(id){
+    var updatedIncoming = incomings.filter(i => i.id === id)[0];
+    updatedIncoming.target.filters = [...updatedIncoming.target.filters, {
+      id: shortid.generate(),
+      predicate: '',
+      operation: '',
+      value: ''
+    }];
+    setIncomings(incomings.map(i => i.id === id ? updatedIncoming : i));
+  }
+
+  function handleIncomingFilterFormChange(e, currentIncoming, currentFilter) {
+    setIncomings(incomings.map(o => o.id === currentIncoming.id
+      ?  {...o, target: {...o.target, filters: o.target.filters.map(f => f.id === currentFilter.id 
+        ? {...f, value: e.target && e.target.value}
+        : f) }}
+      : o))
+  } 
+
+  function handleIncomingDeleteFilterForm(currentIncoming, currentFilter) {
+    setIncomings(incomings.map(o => o.id === currentIncoming.id
+      ?  {...o, target: {...o.target, filters: o.target.filters.filter(f => f.id !== currentFilter.id)}}
+      : o))
+  }
+
+  function handleIncomingDeleteForm(currentIncoming) {
+    setIncomings(incomings.filter(o => o.id !== currentIncoming.id));
+  }
+
+  function handleIncomingTypeaheadFilterSelection(selected, currentIncoming, currentFilter, typeahead){
+    setIncomings(incomings.map(o => o.id === currentIncoming.id
+      ? {...o, target: {...o.target, filters: o.target.filters.map(f => f.id === currentFilter.id 
+        ? {...f, [typeahead]: selected.length && selected[0]}
+        : f) }} 
+      : o));
+  }
+
+  function handleIncomingTypeaheadFilterChange(val, currentIncoming, currentFilter, typeahead){
+    setIncomings(incomings.map(o => o.id === currentIncoming.id
+      ? {...o, target: {...o.target, filters: o.target.filters.map(f => f.id === currentFilter.id 
+        ? {...f, [typeahead]: val}
+        : f) }}
+      : o));
+  }
+
+  function renderIncomings() {
+    var incomingGroups = [];
+    for(var incoming of incomings) {
+      var filterGroups = [];
+      if (!incoming.target) continue;
+      for(var filter of incoming.target.filters) {
+        filterGroups.push(<InputGroup className="input-group">
+          <Typeahead
+              labelKey="predicate"
+              multiple={false}
+              options={predicates}
+              placeholder="Choose a predicate"
+              className="Typeahead"
+              value={filter.predicate}
+              allowNew={true}
+              onChange={((currentIncoming, currentFilter) =>
+                (selected) => handleIncomingTypeaheadFilterSelection(selected, currentIncoming, currentFilter, 'predicate'))(incoming, filter)}
+              onInputChange={((currentIncoming, currentFilter) =>
+                (val) => handleIncomingTypeaheadFilterChange(val, currentIncoming, currentFilter, 'predicate'))(incoming, filter)}
+            />
+            <Typeahead
+              labelKey="operation"
+              multiple={false}
+              options={operations}
+              placeholder="Choose an operation"
+              className="Typeahead"
+              value={filter.operation}
+              onChange={((currentIncoming, currentFilter) =>
+                (selected) => handleIncomingTypeaheadFilterSelection(selected, currentIncoming, currentFilter, 'operation'))(incoming, filter)}
+              onInputChange={((currentIncoming, currentFilter) =>
+                (val) => handleIncomingTypeaheadFilterChange(val, currentIncoming, currentFilter, 'operation'))(incoming, filter)}
+            ></Typeahead>
+            <FormControl
+              placeholder="value"
+              aria-label="value"
+              value={filter.value}
+              onChange={((currentIncoming, currentFilter) => (e) => handleIncomingFilterFormChange(e, currentIncoming, currentFilter))(incoming, filter)}
+            />
+            <Button variant="danger" onClick={((currentIncoming, currentFilter) => () => handleIncomingDeleteFilterForm(currentIncoming, currentFilter))(incoming, filter)}>X</Button>
+          </InputGroup>);
+      }
+      incomingGroups.push(<div className="section">
+      <Form.Label>
+        Path
+      </Form.Label>
+      <Form.Control
+        className="path-input"
+        placeholder="path"
+        aria-label="path"
+        value={incoming.path}
+        onChange={((currentIncoming) => (e) => setIncomings(outgoings.map(o => o.id === currentIncoming.id ? {...o, path: e.target && e.target.value} : o)))(incoming)}
+      />
+      <Form.Label>
+        Level
+      </Form.Label>
+      <Form.Control
+        className="path-input"
+        placeholder="level"
+        aria-label="level"
+        value={incoming.level}
+        onChange={((currentIncoming) => (e) => setIncomings(outgoings.map(o => o.id === currentIncoming.id ? {...o, level: e.target && e.target.value} : o)))(incoming)}
+      />
+      <Form.Label>
+        Filters:
+      </Form.Label>
+      {filterGroups}
+      <div className="action-button">
+            <Button variant="info" onClick={((currentIncoming) => () => addIncomingFilter(currentIncoming.id))(incoming)}>Add Filter</Button>
+            <Button variant="danger" onClick={((currentIncoming) => () => handleIncomingDeleteForm(currentIncoming))(incoming)}>Remove</Button>
+        </div>
+      </div>);
+    }
+    return <>
+    {incomingGroups}
+    </>;
   }
 
   async function setConnection() {
@@ -236,6 +431,13 @@ function App() {
     return false;
   }
 
+  function anyValidIncomings() {
+    for(var incoming of incomings) {
+      if(incoming.target && incoming.target.filters && incoming.target.filters.some((filter) => filter.predicate && filter.operation && filter.value)) return true;
+    }
+    return false;
+  }
+
   function tryParseInt(str,defaultValue = 0) {
     var retValue = defaultValue;
     if(str) {
@@ -246,41 +448,6 @@ function App() {
     return retValue;
   }
 
-
-  function createTableHeader(allProperties) {
-    var ths = [];
-    ths.push(<th>#</th>);
-    for(var headerValue of allProperties){
-      ths.push(<th>{headerValue}</th>)
-    }
-    return <thead><tr>{ths}</tr></thead>;
-  }
-
-  function createTableBody(values, allProperties) {
-    var trs = [];
-    var count = 1;
-    for(var value of values) {
-      var tds = []
-      tds.push(<td>{count++}</td>);
-      for(var property of allProperties) {
-        tds.push(<td>{value[property]}</td>);
-      }
-      trs.push(<tr>{tds}</tr>);
-    }
-    return (<tbody>{trs}</tbody>);
-  }
-
-  function createTable() {
-    var set = new Set();
-    for(var value of values) {
-      for(var property in value) {
-        set.add(property);
-      }
-    }
-    return (<Table striped bordered hover variant="dark">{createTableHeader(set)}{createTableBody(values, set)}</Table>);
-  }
-
- 
 
   async function runQuery() {
     console.log(filters);
@@ -300,7 +467,6 @@ function App() {
       }
     }
 
-    // TODO: better check for existance of valid outgoings
     if (anyValidOutgoings()){
       body.outgoing = [];
       for(var outgoing of outgoings) {
@@ -326,6 +492,34 @@ function App() {
           newOutgoing.level = tryParseInt(newOutgoing.level);
         }
         body.outgoing.push(newOutgoing)
+      }
+    }
+
+    if (anyValidIncomings()){
+      body.incoming = [];
+      for(var incoming of incomings) {
+        var newIncoming = {
+          path: incoming.path,
+          level: incoming.level,
+          target: {
+            filter: {}
+          }
+        };
+        for(var filter of incoming.target.filters) {
+          newIncoming.target.filter[filter.predicate] = { 
+            op: filter.operation,
+            value: filter.value
+          }
+          // convert strings to bools
+          if (newIncoming.target.filter[filter.predicate].value === "true") {
+            newIncoming.target.filter[filter.predicate].value = true;
+          }
+          if (newIncoming.target.filter[filter.predicate].value === "false") {
+            newIncoming.target.filter[filter.predicate].value = false;
+          }
+          newIncoming.level = tryParseInt(newIncoming.level);
+        }
+        body.incoming.push(newIncoming)
       }
     }
     
@@ -392,12 +586,21 @@ function App() {
         <div className="action-button">
             <Button variant="info" onClick={addFilter}>Add Filter</Button>
         </div>
+      <hr/>
       <h5 className="section-title" onClick={() => setShowOutgoing(!showOutgoing)}>
         Outgoing
       </h5>
         {renderOutgoings()}
         <div className="action-button">
             <Button variant="info" onClick={addOutgoing}>Add Outgoing</Button>
+        </div>
+      <hr/>
+      <h5 className="section-title" onClick={() => setShowIncoming(!showIncoming)}>
+        Incoming
+      </h5>
+        {renderIncomings()}
+        <div className="action-button">
+            <Button variant="info" onClick={addIncoming}>Add Incoming</Button>
         </div>
       <hr/>
       <div className="action-button">

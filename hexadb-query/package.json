@@ -13,7 +13,8 @@
     "react-bootstrap-typeahead": "^3.4.7",
     "react-dom": "^16.12.0",
     "react-json-view": "^1.19.1",
-    "react-scripts": "3.3.0"
+    "react-scripts": "3.3.0",
+    "shortid": "^2.2.15"
   },
   "scripts": {
     "start": "react-scripts start",
