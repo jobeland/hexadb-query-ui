@@ -10,14 +10,15 @@ import Jumbotron from 'react-bootstrap/Jumbotron';
 import Collapse from 'react-bootstrap/Collapse';
 import {Typeahead} from 'react-bootstrap-typeahead';
 import logo from './logo.svg';
+import ReactJson from 'react-json-view'
 import './App.css';
 import 'react-bootstrap-typeahead/css/Typeahead.css';
 
 function App() {
   const [predicates, setPredicates] = React.useState(['type', 'temp', 'humidity', 'color']);
   const [operations, setOperations] = React.useState(['eq', 'ge', 'gt', 'le', 'lt', 'ne']);
-  const [hostUrl, setHostUrl] = React.useState('');
-  const [storeId, setStoreId] = React.useState('');
+  const [hostUrl, setHostUrl] = React.useState(localStorage.getItem('hostUrl') || '');
+  const [storeId, setStoreId] = React.useState(localStorage.getItem('storeId') || '');
   const [filters, setFilters] = React.useState([
     {
       index: 0,
@@ -221,9 +222,11 @@ function App() {
   async function setConnection() {
     console.log(hostUrl);
     const response =
-      await axios.get(`${hostUrl}/api/store/${storeId}/predicates`);
+      await axios.get(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/predicates`);
     console.log(response.data);
     setPredicates(response.data.values);
+    localStorage.setItem('hostUrl', hostUrl);
+    localStorage.setItem('storeId', storeId);
   }
 
   function anyValidOutgoings() {
@@ -328,11 +331,34 @@ function App() {
     
     console.log(body);
     const response =
-      await axios.post(`${hostUrl}/api/store/${storeId}/query`, body);
+      await axios.post(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/query`, body);
     console.log(response);
     setJsonResponse(JSON.stringify(response.data, null, 2));
+    setJsonResponse(response.data);
     setShowJson(true);
     // setValues(response.data.values);
+  }
+
+  async function nodeSelected(selected) {
+    console.log(selected);
+    if(selected.name === 'id') {
+      var nodeToUpdate = jsonResponse;
+      for(var i of selected.namespace){
+        nodeToUpdate = nodeToUpdate[i];
+      }
+      const response = await axios.get(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/${encodeURIComponent(selected.value)}`);
+      console.log(response);
+      nodeToUpdate = {...nodeToUpdate, ...response.data};
+      for(var i = selected.namespace.length - 1; i >= 0; i--){
+        var parentNode = jsonResponse;
+        for(var j = 0; j < i; j++){
+          parentNode = parentNode[selected.namespace[j]];
+        }
+        parentNode[selected.namespace[i]] = nodeToUpdate;
+        nodeToUpdate = parentNode;
+      }
+      setJsonResponse(JSON.parse(JSON.stringify(nodeToUpdate)));
+    }
   }
 
   return (
@@ -384,18 +410,8 @@ function App() {
         </h5>
         <Collapse in={showJson}>
           <div className="section query-response">
-            <pre>{jsonResponse}</pre>
-          </div>
-        </Collapse>
-      </div>
-      <hr/>
-      <div>
-        <h5 className="section-title" onClick={() => setShowTable(!showTable)}>
-          Query Response Table
-        </h5>
-        <Collapse in={showTable}>
-          <div className="section query-response">
-            <pre>{createTable()}</pre>
+            <ReactJson src={jsonResponse} onSelect={nodeSelected}></ReactJson>
+            {/* <pre>{jsonResponse}</pre> */}
           </div>
         </Collapse>
       </div>
