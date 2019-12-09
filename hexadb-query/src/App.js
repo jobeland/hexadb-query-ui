@@ -62,7 +62,7 @@ function App() {
       }
     }
   ]);
-  const [jsonResponse, setJsonResponse] = React.useState('No Result');
+  const [jsonResponse, setJsonResponse] = React.useState({});
   const [showJson, setShowJson] = React.useState(false);
   const [showTable, setShowTable] = React.useState(false);
   const [showConnectionInfo, setShowConnectionInfo] = React.useState(true);
@@ -448,6 +448,17 @@ function App() {
     return retValue;
   }
 
+  function tryParseFloat(str,defaultValue = 0) {
+    var retValue = defaultValue;
+    if(str) {
+      if (!isNaN(str)) {
+          retValue = parseFloat(str);
+      }
+    }
+    return retValue;
+  }
+  
+
 
   async function runQuery() {
     console.log(filters);
@@ -464,6 +475,9 @@ function App() {
       }
       if (body.filter[filter.predicate].value === "false") {
         body.filter[filter.predicate].value = false;
+      }
+      if (!isNaN(parseFloat(body.filter[filter.predicate].value))) {
+        body.filter[filter.predicate].value = parseFloat(body.filter[filter.predicate].value);
       }
     }
 
@@ -488,6 +502,9 @@ function App() {
           }
           if (newOutgoing.target.filter[filter.predicate].value === "false") {
             newOutgoing.target.filter[filter.predicate].value = false;
+          }
+          if (!isNaN(parseFloat(newOutgoing.target.filter[filter.predicate].value))) {
+            newOutgoing.target.filter[filter.predicate].value = parseFloat(newOutgoing.target.filter[filter.predicate].value);
           }
           newOutgoing.level = tryParseInt(newOutgoing.level);
         }
@@ -516,6 +533,9 @@ function App() {
           }
           if (newIncoming.target.filter[filter.predicate].value === "false") {
             newIncoming.target.filter[filter.predicate].value = false;
+          }
+          if (!isNaN(parseFloat(newIncoming.target.filter[filter.predicate].value))) {
+            newIncoming.target.filter[filter.predicate].value = parseFloat(newIncoming.target.filter[filter.predicate].value);
           }
           newIncoming.level = tryParseInt(newIncoming.level);
         }
@@ -566,42 +586,58 @@ function App() {
         <h5 className="section-title" onClick={() => setShowConnectionInfo(!showConnectionInfo)}>
           Connection Info
         </h5>
-          <Form className="section">
-            <Form.Group controlId="formBasicEmail">
-              <Form.Label>Host Url</Form.Label>
-              <Form.Control type="text" placeholder="https://YourHost:YourPort" value={hostUrl} onChange={(e) => setHostUrl(e.target.value)}/>
-              <Form.Label>Store Id</Form.Label>
-              <Form.Control type="text" placeholder="abc123" value={storeId} onChange={(e) => setStoreId(e.target.value)}/>
-            </Form.Group>
-          </Form>
-          <div className="action-button">
-            <Button variant="info" onClick={setConnection}>Set Connection</Button>
+        <Collapse in={showConnectionInfo}>
+          <div>
+            <Form className="section">
+              <Form.Group controlId="formBasicEmail">
+                <Form.Label>Host Url</Form.Label>
+                <Form.Control type="text" placeholder="https://YourHost:YourPort" value={hostUrl} onChange={(e) => setHostUrl(e.target.value)}/>
+                <Form.Label>Store Id</Form.Label>
+                <Form.Control type="text" placeholder="abc123" value={storeId} onChange={(e) => setStoreId(e.target.value)}/>
+              </Form.Group>
+            </Form>
+            <div className="action-button">
+              <Button variant="info" onClick={setConnection}>Set Connection</Button>
+            </div>
           </div>
+      </Collapse>
       </div>
       <hr/>
       <h5 className="section-title" onClick={() => setShowFilters(!showFilters)}>
         Filters
       </h5>
-        {renderFilters()}
-        <div className="action-button">
-            <Button variant="info" onClick={addFilter}>Add Filter</Button>
+      <Collapse in={showFilters}>
+        <div>
+          {renderFilters()}
+          <div className="action-button">
+              <Button variant="info" onClick={addFilter}>Add Filter</Button>
+          </div>
         </div>
+      </Collapse>
       <hr/>
       <h5 className="section-title" onClick={() => setShowOutgoing(!showOutgoing)}>
         Outgoing
       </h5>
-        {renderOutgoings()}
-        <div className="action-button">
-            <Button variant="info" onClick={addOutgoing}>Add Outgoing</Button>
+      <Collapse in={showOutgoing}>
+        <div>
+          {renderOutgoings()}
+          <div className="action-button">
+              <Button variant="info" onClick={addOutgoing}>Add Outgoing</Button>
+          </div>
         </div>
+      </Collapse>
       <hr/>
       <h5 className="section-title" onClick={() => setShowIncoming(!showIncoming)}>
         Incoming
       </h5>
-        {renderIncomings()}
-        <div className="action-button">
-            <Button variant="info" onClick={addIncoming}>Add Incoming</Button>
+      <Collapse in={showIncoming}>
+        <div>
+          {renderIncomings()}
+          <div className="action-button">
+              <Button variant="info" onClick={addIncoming}>Add Incoming</Button>
+          </div>
         </div>
+      </Collapse>
       <hr/>
       <div className="action-button">
         <Button variant="primary" onClick={runQuery}>Run Query</Button>
