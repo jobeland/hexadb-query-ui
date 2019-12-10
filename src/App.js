@@ -16,7 +16,11 @@ import 'react-bootstrap-typeahead/css/Typeahead.css';
 const shortid = require('shortid');
 
 function App() {
-  const [predicates, setPredicates] = React.useState(['type', 'temp', 'humidity', 'color']);
+  var cachedPredicates = localStorage.getItem('predicates');
+  if(cachedPredicates){
+    cachedPredicates = cachedPredicates.split(",");
+  }
+  const [predicates, setPredicates] = React.useState(cachedPredicates || ['type', 'id']);
   const [operations, setOperations] = React.useState(['eq', 'ge', 'gt', 'le', 'lt', 'ne']);
   const [hostUrl, setHostUrl] = React.useState(localStorage.getItem('hostUrl') || '');
   const [storeId, setStoreId] = React.useState(localStorage.getItem('storeId') || '');
@@ -70,6 +74,8 @@ function App() {
   const [showOutgoing, setShowOutgoing] = React.useState(false);
   const [showIncoming, setShowIncoming] = React.useState(false);
   const [values, setValues] = React.useState([]);
+  const [showAggregates, setShowAggregates] = React.useState(false);
+  const [countAggregate, setCountAggregate] = React.useState(false);
  
 
   function handleFilterFormChange(e, currentFilter) {
@@ -419,9 +425,14 @@ function App() {
     const response =
       await axios.get(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/predicates`);
     console.log(response.data);
-    setPredicates(response.data.values);
+    var predicates = response.data.values;
+    if(!predicates.includes('id')){
+      predicates = [...predicates, 'id'];
+    }
+    setPredicates(predicates);
     localStorage.setItem('hostUrl', hostUrl);
     localStorage.setItem('storeId', storeId);
+    localStorage.setItem('predicates', predicates);
   }
 
   function anyValidOutgoings() {
@@ -460,11 +471,15 @@ function App() {
   
 
 
-  async function runQuery() {
+  async function runQuery(e, continuation) {
     console.log(filters);
     console.log(outgoings);
     var body = { filter: {}};
+    var id = null;
     for(var filter of filters){
+      if(filter.predicate === 'id' && filter.operation === 'eq' && filter.value) {
+        id = filter.value;
+      }
       body.filter[filter.predicate] = { 
         op: filter.operation,
         value: filter.value
@@ -491,22 +506,28 @@ function App() {
             filter: {}
           }
         };
-        for(var filter of outgoing.target.filters) {
-          newOutgoing.target.filter[filter.predicate] = { 
-            op: filter.operation,
-            value: filter.value
+        if (outgoing.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq' && f.value)) {
+            delete newOutgoing.target.filter;
+            newOutgoing.target = {id: outgoing.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq')[0].value}
+        } 
+        else {
+          for(var filter of outgoing.target.filters) {
+            newOutgoing.target.filter[filter.predicate] = { 
+              op: filter.operation,
+              value: filter.value
+            }
+            // convert strings to bools
+            if (newOutgoing.target.filter[filter.predicate].value === "true") {
+              newOutgoing.target.filter[filter.predicate].value = true;
+            }
+            if (newOutgoing.target.filter[filter.predicate].value === "false") {
+              newOutgoing.target.filter[filter.predicate].value = false;
+            }
+            if (!isNaN(parseFloat(newOutgoing.target.filter[filter.predicate].value))) {
+              newOutgoing.target.filter[filter.predicate].value = parseFloat(newOutgoing.target.filter[filter.predicate].value);
+            }
+            newOutgoing.level = tryParseInt(newOutgoing.level);
           }
-          // convert strings to bools
-          if (newOutgoing.target.filter[filter.predicate].value === "true") {
-            newOutgoing.target.filter[filter.predicate].value = true;
-          }
-          if (newOutgoing.target.filter[filter.predicate].value === "false") {
-            newOutgoing.target.filter[filter.predicate].value = false;
-          }
-          if (!isNaN(parseFloat(newOutgoing.target.filter[filter.predicate].value))) {
-            newOutgoing.target.filter[filter.predicate].value = parseFloat(newOutgoing.target.filter[filter.predicate].value);
-          }
-          newOutgoing.level = tryParseInt(newOutgoing.level);
         }
         body.outgoing.push(newOutgoing)
       }
@@ -522,33 +543,49 @@ function App() {
             filter: {}
           }
         };
-        for(var filter of incoming.target.filters) {
-          newIncoming.target.filter[filter.predicate] = { 
-            op: filter.operation,
-            value: filter.value
+        if (incoming.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq' && f.value)) {
+          delete newIncoming.target.filter;
+          newIncoming.target = {id: incoming.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq')[0].value}
+        }  
+        else {
+          for(var filter of incoming.target.filters) {
+            newIncoming.target.filter[filter.predicate] = { 
+              op: filter.operation,
+              value: filter.value
+            }
+            // convert strings to bools
+            if (newIncoming.target.filter[filter.predicate].value === "true") {
+              newIncoming.target.filter[filter.predicate].value = true;
+            }
+            if (newIncoming.target.filter[filter.predicate].value === "false") {
+              newIncoming.target.filter[filter.predicate].value = false;
+            }
+            if (!isNaN(parseFloat(newIncoming.target.filter[filter.predicate].value))) {
+              newIncoming.target.filter[filter.predicate].value = parseFloat(newIncoming.target.filter[filter.predicate].value);
+            }
+            newIncoming.level = tryParseInt(newIncoming.level);
           }
-          // convert strings to bools
-          if (newIncoming.target.filter[filter.predicate].value === "true") {
-            newIncoming.target.filter[filter.predicate].value = true;
-          }
-          if (newIncoming.target.filter[filter.predicate].value === "false") {
-            newIncoming.target.filter[filter.predicate].value = false;
-          }
-          if (!isNaN(parseFloat(newIncoming.target.filter[filter.predicate].value))) {
-            newIncoming.target.filter[filter.predicate].value = parseFloat(newIncoming.target.filter[filter.predicate].value);
-          }
-          newIncoming.level = tryParseInt(newIncoming.level);
         }
         body.incoming.push(newIncoming)
       }
     }
-    
+    if(continuation) {
+      body.continuation = jsonResponse['continuation'];
+    }
+    if(countAggregate) {
+      body.aggregates = [{type : "count"}];
+    }
+
     console.log(body);
-    const response =
+    const response = id ? await axios.get(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/${id}`) :
       await axios.post(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/query`, body);
     console.log(response);
-    setJsonResponse(JSON.stringify(response.data, null, 2));
-    setJsonResponse(response.data);
+    if(continuation){
+      setJsonResponse({...response.data, values: [...jsonResponse.values, ...response.data.values]});
+    } else {
+      setJsonResponse(response.data);
+    }
+    // setJsonResponse(JSON.stringify(response.data, null, 2));
     setShowJson(true);
     // setValues(response.data.values);
   }
@@ -572,6 +609,9 @@ function App() {
         nodeToUpdate = parentNode;
       }
       setJsonResponse(JSON.parse(JSON.stringify(nodeToUpdate)));
+    }
+    if(selected.namespace && selected.namespace.length === 1 && selected.namespace[0] === 'continuation'){
+      runQuery(null, jsonResponse.continuation);
     }
   }
 
@@ -636,6 +676,22 @@ function App() {
           <div className="action-button">
               <Button variant="info" onClick={addIncoming}>Add Incoming</Button>
           </div>
+        </div>
+      </Collapse>
+      <hr/>
+      <h5 className="section-title" onClick={() => setShowAggregates(!showAggregates)}>
+        Aggregates
+      </h5>
+      <Collapse in={showAggregates}>
+        <div className="section">
+        <Form.Check 
+          type='switch'
+          checked={countAggregate}
+          onChange={() => setCountAggregate(!countAggregate)}
+          id={`aggregates-count-switch`}
+          name='aggregates-switch'
+          label={`Count`}
+        />
         </div>
       </Collapse>
       <hr/>
