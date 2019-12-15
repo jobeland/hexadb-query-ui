@@ -506,7 +506,7 @@ function App() {
             filter: {}
           }
         };
-        if (outgoing.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq' && f.value)) {
+        if (outgoing.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq' && f.value).length) {
             delete newOutgoing.target.filter;
             newOutgoing.target = {id: outgoing.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq')[0].value}
         } 
@@ -543,7 +543,7 @@ function App() {
             filter: {}
           }
         };
-        if (incoming.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq' && f.value)) {
+        if (incoming.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq' && f.value).length) {
           delete newIncoming.target.filter;
           newIncoming.target = {id: incoming.target.filters.filter(f => f.predicate === 'id' && f.operation === 'eq')[0].value}
         }  
