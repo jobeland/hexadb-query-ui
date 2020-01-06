@@ -4,15 +4,15 @@ import axios from 'axios';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Form from 'react-bootstrap/Form';
 import FormControl from 'react-bootstrap/FormControl';
-import Table from 'react-bootstrap/Table';
-import FormLabel from 'react-bootstrap/FormLabel';
 import Jumbotron from 'react-bootstrap/Jumbotron';
 import Collapse from 'react-bootstrap/Collapse';
 import {Typeahead} from 'react-bootstrap-typeahead';
-import logo from './logo.svg';
 import ReactJson from 'react-json-view'
 import './App.css';
 import 'react-bootstrap-typeahead/css/Typeahead.css';
+import Graph from 'vis-react';
+import ColorMapper from './colorMapper';
+
 const shortid = require('shortid');
 
 function App() {
@@ -68,7 +68,7 @@ function App() {
   ]);
   const [jsonResponse, setJsonResponse] = React.useState({});
   const [showJson, setShowJson] = React.useState(false);
-  const [showTable, setShowTable] = React.useState(false);
+  const [showGraph, setShowGraph] = React.useState(true);
   const [showConnectionInfo, setShowConnectionInfo] = React.useState(true);
   const [showFilters, setShowFilters] = React.useState(true);
   const [showOutgoing, setShowOutgoing] = React.useState(false);
@@ -76,7 +76,7 @@ function App() {
   const [values, setValues] = React.useState([]);
   const [showAggregates, setShowAggregates] = React.useState(false);
   const [countAggregate, setCountAggregate] = React.useState(false);
- 
+  const [colorNodes, setColorNodes] = React.useState(true);
 
   function handleFilterFormChange(e, currentFilter) {
     setFilters(filters.map(f => f.id === currentFilter.id ? {...f, value: e.target && e.target.value} : f));
@@ -99,6 +99,7 @@ function App() {
     for(var filter of filters) {
       filterGroups.push(<InputGroup className="input-group">
       <Typeahead
+          id={filter.id + "predicate"}
           labelKey="predicate"
           multiple={false}
           options={predicates}
@@ -110,6 +111,7 @@ function App() {
           onInputChange={((currentFilter) => (val) => handleTypeaheadFilterChange(val, currentFilter, 'predicate'))(filter)}
         />
         <Typeahead
+          id={filter.id + "operation"}
           labelKey="operation"
           multiple={false}
           options={operations}
@@ -175,6 +177,7 @@ function App() {
       for(var filter of outgoing.target.filters) {
         filterGroups.push(<InputGroup className="input-group">
           <Typeahead
+              id={filter.id + "predicate-outgoing"}
               labelKey="predicate"
               multiple={false}
               options={predicates}
@@ -188,6 +191,7 @@ function App() {
                 (val) => handleOutgoingTypeaheadFilterChange(val, currentOutgoing, currentFilter, 'predicate'))(outgoing, filter)}
             />
             <Typeahead
+              id={filter.id + "operation-outgoing"}
               labelKey="operation"
               multiple={false}
               options={operations}
@@ -351,6 +355,7 @@ function App() {
       for(var filter of incoming.target.filters) {
         filterGroups.push(<InputGroup className="input-group">
           <Typeahead
+              id={filter.id + "predicate-incoming"}
               labelKey="predicate"
               multiple={false}
               options={predicates}
@@ -364,6 +369,7 @@ function App() {
                 (val) => handleIncomingTypeaheadFilterChange(val, currentIncoming, currentFilter, 'predicate'))(incoming, filter)}
             />
             <Typeahead
+              id={filter.id + "operation-incoming"}
               labelKey="operation"
               multiple={false}
               options={operations}
@@ -577,17 +583,84 @@ function App() {
     }
 
     console.log(body);
+    setShowGraph(true);
     const response = id ? await axios.get(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/${id}`) :
       await axios.post(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/query`, body);
     console.log(response);
-    if(continuation){
-      setJsonResponse({...response.data, values: [...jsonResponse.values, ...response.data.values]});
-    } else {
-      setJsonResponse(response.data);
+    var newJson = continuation ? {...response.data, values: [...jsonResponse.values, ...response.data.values]} : response.data;
+    setJsonResponse(newJson);
+
+    var newNodes = [];
+    var newEdges = [];
+    for(var node of newJson.values) {
+      var newNode = {id: node.id, label: node.id, title: node.id};
+      if (colorNodes) {
+        newNode['color'] = ColorMapper.getColorForNode(node);
+      }
+      newNodes.push(newNode);
+      const toAdd = tryAddNodeToGraph(node);
+      newNodes = [...newNodes, ...toAdd.nodes];
+      newEdges = [...newEdges, ...toAdd.edges];
     }
-    // setJsonResponse(JSON.stringify(response.data, null, 2));
+    setShowGraph(true);
+    setGraph({nodes: newNodes, edges: newEdges});
+
     setShowJson(true);
-    // setValues(response.data.values);
+  }
+
+  function tryAddNodeToGraph(node){
+    var nodes = [];
+    var edges = [];
+    for(var propertyKey in node){
+      var property = node[propertyKey];
+      if(property === null) return { nodes, edges};
+      if (Array.isArray(property)){
+        for(var item of property){
+          if (!item.id) continue;
+          var newNode = {id: item.id, label: item.id, title: item.id};
+          if (colorNodes) {
+            newNode['color'] = ColorMapper.getColorForNode(item);
+          }
+          nodes.push(newNode)
+          edges.push({id: `${node.id}-to-${item.id}`, from: node.id, to: item.id})
+        }
+      }
+      else if (typeof property === 'object'){
+        if (!property.id) continue;
+        var newNode = {id: property.id, label: property.id, title: property.id};
+        if (colorNodes) {
+          newNode['color'] = ColorMapper.getColorForNode(property);
+        }
+        nodes.push(newNode)
+        edges.push({id: `${node.id}-to-${property.id}`, from: node.id, to: property.id})
+      }
+    }
+    return {nodes, edges};
+  }
+
+  function redrawGraph(useColor) {
+    var edges = [];
+    var newNodes = [];
+    for(var node of graph.nodes) {
+      var newNode = {id: node.id, label: node.id, title: node.id};
+      if (useColor) {
+        newNode['color'] = ColorMapper.getColorForNode(node);
+      }
+      newNodes.push(newNode);
+    }
+    for(var edge of graph.edges){
+      edges.push(edge);
+    }
+    setGraph({
+      nodes: [
+      ],
+      edges: [
+      ]
+    });
+    setTimeout(() => {
+      setShowGraph(true);
+      setGraph({...graph, nodes: newNodes, edges});
+    }, 1);
   }
 
   async function nodeSelected(selected) {
@@ -597,8 +670,12 @@ function App() {
       for(var i of selected.namespace){
         nodeToUpdate = nodeToUpdate[i];
       }
+
       const response = await axios.get(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/${encodeURIComponent(selected.value)}`);
       console.log(response);
+      var graphUpdate = tryAddNodeToGraph(response.data);
+      setGraph({nodes: [...graph.nodes, ...graphUpdate.nodes], edges: [...graph.edges, ...graphUpdate.edges]});
+
       nodeToUpdate = {...nodeToUpdate, ...response.data};
       for(var i = selected.namespace.length - 1; i >= 0; i--){
         var parentNode = jsonResponse;
@@ -614,6 +691,26 @@ function App() {
       runQuery(null, jsonResponse.continuation);
     }
   }
+
+const [graph, setGraph] = React.useState({
+  nodes: [
+  ],
+  edges: [
+  ]
+});
+
+var events = {
+  select: async function(event) {
+      var { nodes, edges } = event;
+      console.log(event);
+      if(!nodes.length) return;
+      const response = await axios.get(`${hostUrl}/api/store/${encodeURIComponent(storeId)}/${encodeURIComponent(nodes[0])}`);
+      console.log(response);
+      var graphUpdate = tryAddNodeToGraph(response.data);
+      setGraph({nodes: [...graph.nodes, ...graphUpdate.nodes], edges: [...graph.edges, ...graphUpdate.edges]});
+      setJsonResponse(JSON.parse(JSON.stringify(response.data)));
+  }
+};
 
   return (
     <div className="App">
@@ -700,6 +797,99 @@ function App() {
       </div>
       <hr/>
       <div>
+        <h5 className="section-title" onClick={() => setShowGraph(!showGraph)}>
+          Query Response Graph
+        </h5>
+          <Collapse in={showGraph}>
+          <div className="section query-response">
+          {/* <Button variant="danger" onClick={expandAll}>Expand All (DANGER)</Button> */}
+          <Form.Check 
+            type='switch'
+            checked={colorNodes}
+            onChange={() => {
+              setColorNodes(!colorNodes);
+              redrawGraph(!colorNodes);
+            }}
+            id={`colornode-switch`}
+            name='colornode-switch'
+            label={`Color Nodes`}
+          />
+          <Graph
+                graph={graph}
+                options={{
+                  configure: {
+                    enabled: false,
+                    filter: 'physics',
+                    showButton: false
+                  },
+                  layout: {
+                    // hierarchical: {
+                    //   enabled: true,
+                    //   nodeSpacing: 425,
+                    //   blockShifting: false,
+                    //   edgeMinimization: false,
+                    //   sortMethod: "directed"
+                    // },
+                    hierarchical: false,
+                    improvedLayout: true,
+                },
+                physics: {
+                  enabled: true,
+                  forceAtlas2Based: {
+                    gravitationalConstant: -146,
+                    centralGravity: 0.01,
+                    springConstant: 0.1,
+                    springLength: 30,
+                    damping: 1,
+                    avoidOverlap: 0.36
+                  },
+                  maxVelocity: 140,
+                  minVelocity: 1.87,
+                  solver: 'forceAtlas2Based',
+                  adaptiveTimestep: true,
+                  stabilization: true
+                },
+                nodes: {
+                  fixed: false,
+                  // scaling: {
+                  //   label: true
+                  // },
+                  shape: 'dot',
+                  shapeProperties : {
+                    interpolation: false
+                  }
+                },
+                edges: {
+                  smooth: {
+                    enabled: true,
+                    type: "continuous",
+                    roundness: 0.5
+                  }
+                },
+                manipulation: false,
+                interaction:{
+                  dragNodes:false,
+                  dragView: true
+                }
+                  // autoResize: true,
+                  // height: '100%',
+                  // width: '100%',
+                  // locale: 'en',
+                  // clickToUse: false,
+                }
+                }
+                events={events}
+                style={ { width: "100%", height: "1500px" }}
+                // getNetwork={getNetwork}
+                // getEdges={getEdges}
+                // getNodes={getNodes}
+                // vis={vis => (this.vis = vis)}
+            />
+          </div>
+        </Collapse>
+      </div>
+      <hr/>
+      <div>
         <h5 className="section-title" onClick={() => setShowJson(!showJson)}>
           Query Response JSON
         </h5>
@@ -711,6 +901,7 @@ function App() {
         </Collapse>
       </div>
       <hr/>
+      
     </div>
   );
 }
@@ -718,5 +909,3 @@ function App() {
 
 
 export default App;
-
-// TODO: basic header, input for url for hexastore, input newline button, submit button, autocomplete, input for each filter, add outgoing and incoming sections, table/json result section

@@ -14,7 +14,9 @@
     "react-dom": "^16.12.0",
     "react-json-view": "^1.19.1",
     "react-scripts": "3.3.0",
-    "shortid": "^2.2.15"
+    "shortid": "^2.2.15",
+    "typescript": "^3.7.4",
+    "vis-react": "^0.4.7"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -43,5 +45,7 @@
     "gh-pages": "^2.1.1"
   },
   "homepage": "https://jobeland.github.io/hexadb-query-ui",
-  "publishConfig": { "registry": "https://npm.pkg.github.com/" }
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  }
 }
