@@ -399,7 +399,7 @@ function App() {
         placeholder="path"
         aria-label="path"
         value={incoming.path}
-        onChange={((currentIncoming) => (e) => setIncomings(outgoings.map(o => o.id === currentIncoming.id ? {...o, path: e.target && e.target.value} : o)))(incoming)}
+        onChange={((currentIncoming) => (e) => setIncomings(incomings.map(o => o.id === currentIncoming.id ? {...o, path: e.target && e.target.value} : o)))(incoming)}
       />
       <Form.Label>
         Level
@@ -409,7 +409,7 @@ function App() {
         placeholder="level"
         aria-label="level"
         value={incoming.level}
-        onChange={((currentIncoming) => (e) => setIncomings(outgoings.map(o => o.id === currentIncoming.id ? {...o, level: e.target && e.target.value} : o)))(incoming)}
+        onChange={((currentIncoming) => (e) => setIncomings(incomings.map(o => o.id === currentIncoming.id ? {...o, level: e.target && e.target.value} : o)))(incoming)}
       />
       <Form.Label>
         Filters:
