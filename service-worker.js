@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/hexadb-query-ui/precache-manifest.0267ab391ee731cff51d6b18549868db.js"
+  "/hexadb-query-ui/precache-manifest.3a012d54b88398a633daff3dcfbd1b00.js"
 );
 
 self.addEventListener('message', (event) => {

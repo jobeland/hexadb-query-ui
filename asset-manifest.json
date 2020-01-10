@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/hexadb-query-ui/static/css/main.a8dc3214.chunk.css",
-    "main.js": "/hexadb-query-ui/static/js/main.b3eb4547.chunk.js",
-    "main.js.map": "/hexadb-query-ui/static/js/main.b3eb4547.chunk.js.map",
+    "main.js": "/hexadb-query-ui/static/js/main.16e8ef02.chunk.js",
+    "main.js.map": "/hexadb-query-ui/static/js/main.16e8ef02.chunk.js.map",
     "runtime-main.js": "/hexadb-query-ui/static/js/runtime-main.3a12208a.js",
     "runtime-main.js.map": "/hexadb-query-ui/static/js/runtime-main.3a12208a.js.map",
     "static/css/2.e31a430a.chunk.css": "/hexadb-query-ui/static/css/2.e31a430a.chunk.css",
     "static/js/2.cbb4be05.chunk.js": "/hexadb-query-ui/static/js/2.cbb4be05.chunk.js",
     "static/js/2.cbb4be05.chunk.js.map": "/hexadb-query-ui/static/js/2.cbb4be05.chunk.js.map",
     "index.html": "/hexadb-query-ui/index.html",
-    "precache-manifest.0267ab391ee731cff51d6b18549868db.js": "/hexadb-query-ui/precache-manifest.0267ab391ee731cff51d6b18549868db.js",
+    "precache-manifest.3a012d54b88398a633daff3dcfbd1b00.js": "/hexadb-query-ui/precache-manifest.3a012d54b88398a633daff3dcfbd1b00.js",
     "service-worker.js": "/hexadb-query-ui/service-worker.js",
     "static/css/2.e31a430a.chunk.css.map": "/hexadb-query-ui/static/css/2.e31a430a.chunk.css.map",
     "static/css/main.a8dc3214.chunk.css.map": "/hexadb-query-ui/static/css/main.a8dc3214.chunk.css.map",
@@ -20,6 +20,6 @@
     "static/css/2.e31a430a.chunk.css",
     "static/js/2.cbb4be05.chunk.js",
     "static/css/main.a8dc3214.chunk.css",
-    "static/js/main.b3eb4547.chunk.js"
+    "static/js/main.16e8ef02.chunk.js"
   ]
 }

@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "75045b7e39675e525ab791687fe459cb",
+    "revision": "acd0815eb92fc5b1948ddca942856f4b",
     "url": "/hexadb-query-ui/index.html"
   },
   {
@@ -8,7 +8,7 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/hexadb-query-ui/static/css/2.e31a430a.chunk.css"
   },
   {
-    "revision": "138d02e76773fdba1139",
+    "revision": "2288b7ca798bee05ed61",
     "url": "/hexadb-query-ui/static/css/main.a8dc3214.chunk.css"
   },
   {
@@ -20,8 +20,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/hexadb-query-ui/static/js/2.cbb4be05.chunk.js.LICENSE"
   },
   {
-    "revision": "138d02e76773fdba1139",
-    "url": "/hexadb-query-ui/static/js/main.b3eb4547.chunk.js"
+    "revision": "2288b7ca798bee05ed61",
+    "url": "/hexadb-query-ui/static/js/main.16e8ef02.chunk.js"
   },
   {
     "revision": "2c6593ca74dfbfecb1fc",
